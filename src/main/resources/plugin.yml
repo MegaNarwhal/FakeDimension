@@ -1,9 +1,11 @@
 name: FakeDimension
 main: fakedimension.FakeDimension
-api-version: 1.14
+api-version: '1.16'
 depend: [ProtocolLib]
-version: 1.1
-author: _Shevchik_
+version: ${project.version}
+authors:
+    - _Shevchik_
+    - Narwhal
 commands:
     fakedimension:
         description: Reload command for FakeDimension

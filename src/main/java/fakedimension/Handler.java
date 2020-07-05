@@ -1,12 +1,14 @@
 package fakedimension;
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.Collections;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.utility.MinecraftReflection;
+import com.comphenix.protocol.wrappers.EnumWrappers.NativeGameMode;
+import net.minecraft.server.v1_16_R1.DimensionManager;
+import net.minecraft.server.v1_16_R1.PacketPlayOutRespawn;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.WorldType;
@@ -16,12 +18,12 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.wrappers.EnumWrappers.NativeGameMode;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Collections;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Handler implements Listener {
 
@@ -42,7 +44,7 @@ public class Handler implements Listener {
 			@Override
 			public void onPacketSending(PacketEvent event) {
 				config.getDimension(event.getPlayer().getWorld().getName())
-				.ifPresent(dimension -> event.getPacket().getDimensions().write(0, dimension.getId()));
+				.ifPresent(dimension -> event.getPacket().getModifier().write(7, dimension.getKeyDimension()));
 			}
 
 		});
@@ -60,11 +62,11 @@ public class Handler implements Listener {
 		/* because player might have respawned in the same dimension after switch from faked to non faked dimension*/
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(PacketAdapter.params(plugin, PacketType.Play.Server.POSITION)) {
 
-			PacketContainer createDimensionSwitch(Player player, WorldType wtype, Dimension targetDimension) {
+			PacketContainer createDimensionSwitch(Player player, World world, Dimension targetDimension) {
 				PacketContainer packet = ProtocolLibrary.getProtocolManager().createPacket(PacketType.Play.Server.RESPAWN);
-				packet.getDimensions().write(0, targetDimension.getId());
+				packet.getModifier().write(0, targetDimension.getKeyDimension());
 				packet.getGameModes().write(0, NativeGameMode.fromBukkit(player.getGameMode()));
-				packet.getWorldTypeModifier().write(0, wtype);
+				packet.getModifier().write(1, targetDimension.getKeyWorld());
 				return packet;
 			}
 
@@ -94,8 +96,8 @@ public class Handler implements Listener {
 
 				Dimension targetDimension = optDimension.orElseGet(() -> Dimension.getByBukkit(world.getEnvironment()));
 
-				sendPacketNow(player, createDimensionSwitch(player, world.getWorldType(), getMiddleDimension(targetDimension)));
-				sendPacketNow(player, createDimensionSwitch(player, world.getWorldType(), targetDimension));
+				sendPacketNow(player, createDimensionSwitch(player, world, getMiddleDimension(targetDimension)));
+				sendPacketNow(player, createDimensionSwitch(player, world, targetDimension));
 			}
 
 		});
